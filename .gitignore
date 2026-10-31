@@ -112,3 +112,9 @@ InitTestScene*.unity*
 
 # Auto-generated cache in Assets folder
 /[Aa]ssets/[Ss]ceneDependencyCache*
+
+# HUG.IO — WebGL build output, server deps and local test artifacts
+/web/
+/Data/
+/server/node_modules/
+/.playwright-mcp/

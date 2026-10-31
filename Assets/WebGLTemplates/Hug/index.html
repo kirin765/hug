@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#0d0818">
+  <meta name="description" content="HUG.IO — a tiny multiplayer world where the score is hugs.">
+  <title>{{{ PRODUCT_NAME }}}</title>
+  <style>
+    :root {
+      --pink: #ff6b9d;
+      --ink: #0d0818;
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: radial-gradient(circle at 50% 20%, #3a2a63 0%, #171024 55%, #0b0714 100%);
+      color: #fff;
+      font-family: "Varela Round", "Trebuchet MS", system-ui, -apple-system, "Segoe UI", sans-serif;
+      -webkit-tap-highlight-color: transparent;
+      overscroll-behavior: none;
+      touch-action: none;
+    }
+
+    #unity-container {
+      position: fixed;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    #unity-canvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+      background: #94d1ff;
+      outline: none;
+    }
+
+    #loading {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 22px;
+      background: radial-gradient(circle at 50% 35%, #3a2a63 0%, #171024 55%, #0b0714 100%);
+      z-index: 5;
+      transition: opacity 0.45s ease;
+    }
+
+    #loading.hidden { opacity: 0; pointer-events: none; }
+
+    .logo {
+      font-size: clamp(44px, 9vw, 92px);
+      font-weight: 800;
+      letter-spacing: 1px;
+      color: var(--pink);
+      text-shadow: 0 6px 0 rgba(0, 0, 0, 0.28);
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      animation: bob 2.6s ease-in-out infinite;
+    }
+
+    .logo svg { width: clamp(36px, 7vw, 68px); height: auto; filter: drop-shadow(0 6px 0 rgba(0,0,0,0.25)); }
+
+    @keyframes bob {
+      0%, 100% { transform: translateY(0) rotate(-1deg); }
+      50% { transform: translateY(-8px) rotate(1deg); }
+    }
+
+    .tagline {
+      font-size: clamp(13px, 1.6vw, 17px);
+      color: rgba(255, 255, 255, 0.6);
+      letter-spacing: 0.5px;
+      margin-top: -10px;
+    }
+
+    #bar {
+      width: min(360px, 62vw);
+      height: 12px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.12);
+      overflow: hidden;
+    }
+
+    #fill {
+      width: 0%;
+      height: 100%;
+      border-radius: 999px;
+      background: linear-gradient(90deg, #ff8fab, #ffd166);
+      transition: width 0.18s ease;
+    }
+
+    #status {
+      font-size: 13px;
+      color: rgba(255, 255, 255, 0.45);
+      min-height: 18px;
+    }
+
+    #warning {
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      z-index: 10;
+      display: none;
+      font-size: 13px;
+    }
+
+    #warning div { padding: 8px 12px; background: #b3261e; }
+    #warning div.warn { background: #8a6d1f; }
+  </style>
+</head>
+<body>
+  <div id="unity-container">
+    <canvas id="unity-canvas" width="{{{ WIDTH }}}" height="{{{ HEIGHT }}}" tabindex="-1"></canvas>
+
+    <div id="loading">
+      <div class="logo">
+        <svg viewBox="0 0 32 29" aria-hidden="true">
+          <path fill="#ff6b9d" d="M16 29S0 18.6 0 8.9C0 3.9 3.9 0 8.8 0c3 0 5.7 1.5 7.2 3.8C17.5 1.5 20.2 0 23.2 0 28.1 0 32 3.9 32 8.9 32 18.6 16 29 16 29z"/>
+        </svg>
+        HUG.IO
+      </div>
+      <div class="tagline">hug everyone. get hugged. climb the board.</div>
+      <div id="bar"><div id="fill"></div></div>
+      <div id="status">loading the island…</div>
+    </div>
+
+    <div id="warning"></div>
+  </div>
+
+  <script>
+    const canvas = document.querySelector("#unity-canvas");
+    const loading = document.querySelector("#loading");
+    const fill = document.querySelector("#fill");
+    const status = document.querySelector("#status");
+    const warning = document.querySelector("#warning");
+
+    function showBanner(msg, type) {
+      const div = document.createElement("div");
+      div.textContent = msg;
+      if (type === "warning") div.className = "warn";
+      warning.appendChild(div);
+      warning.style.display = "block";
+      if (type !== "error") {
+        setTimeout(() => {
+          if (div.parentNode) div.parentNode.removeChild(div);
+          warning.style.display = warning.children.length ? "block" : "none";
+        }, 5000);
+      }
+    }
+
+    const buildUrl = "Build";
+    const config = {
+      dataUrl: buildUrl + "/{{{ DATA_FILENAME }}}",
+      frameworkUrl: buildUrl + "/{{{ FRAMEWORK_FILENAME }}}",
+      codeUrl: buildUrl + "/{{{ CODE_FILENAME }}}",
+      streamingAssetsUrl: "StreamingAssets",
+      companyName: "{{{ COMPANY_NAME }}}",
+      productName: "{{{ PRODUCT_NAME }}}",
+      productVersion: "{{{ PRODUCT_VERSION }}}",
+      showBanner: showBanner,
+      devicePixelRatio: Math.min(window.devicePixelRatio || 1, 2),
+      matchWebGLToCanvasSize: true,
+    };
+
+    const script = document.createElement("script");
+    script.src = buildUrl + "/{{{ LOADER_FILENAME }}}";
+    script.onload = () => {
+      createUnityInstance(canvas, config, (progress) => {
+        fill.style.width = Math.round(progress * 100) + "%";
+        if (progress > 0.85) status.textContent = "warming up…";
+      }).then((instance) => {
+        window.unityInstance = instance;
+        loading.classList.add("hidden");
+        setTimeout(() => loading.remove(), 600);
+        canvas.focus();
+      }).catch((message) => {
+        status.textContent = message;
+        showBanner(message, "error");
+      });
+    };
+    script.onerror = () => {
+      status.textContent = "Could not load the game files.";
+      showBanner("Could not load the game files.", "error");
+    };
+    document.body.appendChild(script);
+
+    // Unity needs a user gesture before it can play audio.
+    canvas.addEventListener("pointerdown", () => canvas.focus());
+  </script>
+</body>
+</html>
